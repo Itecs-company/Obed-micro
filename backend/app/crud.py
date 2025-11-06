@@ -5,16 +5,23 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from . import models, schemas
-from .auth import get_password_hash
+from .auth import get_password_hash, verify_password
 from .logs import log_manager
 
 
 def ensure_default_user(db: Session) -> None:
-    if not db.query(models.User).first():
+    user = db.query(models.User).filter(models.User.username == "admin").first()
+    if not user:
         user = models.User(username="admin", password_hash=get_password_hash("admin123"))
         db.add(user)
         db.commit()
         log_manager.add("INFO", "Created default admin credentials")
+        return
+
+    if not verify_password("admin123", user.password_hash):
+        user.password_hash = get_password_hash("admin123")
+        db.commit()
+        log_manager.add("INFO", "Reset default admin credentials")
 
 
 def ensure_settings(db: Session) -> models.Settings:
