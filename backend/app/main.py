@@ -39,6 +39,8 @@ def on_startup() -> None:
 
 @app.post("/auth/login", response_model=schemas.Token)
 def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
+    # Ensure default credentials exist even if database initialization raced backend startup
+    crud.ensure_default_user(db)
     user = auth.authenticate_user(db, payload.username, payload.password)
     if not user:
         raise HTTPException(status_code=401, detail="Неверные учетные данные")
