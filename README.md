@@ -24,7 +24,7 @@ docker compose up --build
 
 После сборки сервисы будут доступны по адресам:
 
-- Интерфейс: http://localhost:3000
+- Интерфейс: http://localhost:3080
 - API: http://localhost:8000/docs (Swagger UI)
 - PostgreSQL: localhost:5432 (логин `root25`, пароль `Admin2025`, база `obed`)
 
