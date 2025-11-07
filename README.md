@@ -95,7 +95,7 @@ curl -X POST http://localhost:8000/webhook/employee \
 | `DATABASE_URL`     | Строка подключения к PostgreSQL             | `postgresql+psycopg2://root25:Admin2025@db:5432/obed` |
 | `SECRET_KEY`       | Секрет для подписи JWT                      | `super-secret-key-change` |
 | `WEBHOOK_SECRET`   | Секрет для webhook                          | `obed-webhook-secret` |
-| `VITE_API_URL`     | URL API для фронтенда (docker)              | `http://backend:8000` |
+| `VITE_API_URL`     | URL API для фронтенда (docker)              | `http://localhost:8000` |
 
 ## Тестовые данные
 
