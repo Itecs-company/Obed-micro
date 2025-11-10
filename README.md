@@ -63,6 +63,53 @@ curl -X POST http://localhost:8000/auth/login \
   -d '{"username":"admin","password":"admin"}'
 ```
 
+### Как добавить запись, чтобы она появилась в интерфейсе
+
+1. Поднимите проект:
+
+   ```bash
+   docker compose up --build
+   ```
+
+   После старта откройте http://localhost:3080 и авторизуйтесь в интерфейсе под логином `admin` и паролем `admin`.
+
+2. В отдельном терминале получите JWT‑токен (он нужен для всех защищенных API):
+
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"admin","password":"admin"}' | jq -r '.access_token')
+   ```
+
+   Если `jq` не установлен, можно просто выполнить запрос и скопировать значение `access_token` из ответа.
+
+3. Добавьте сотрудника через API, передавая токен в заголовке `Authorization`:
+
+   ```bash
+   curl -X POST http://localhost:8000/employees \
+     -H "Authorization: Bearer ${TOKEN}" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "full_name":"Петров Петр",
+       "status":true,
+       "date":"2024-04-01",
+       "note":"В офисе"
+     }'
+   ```
+
+   Эндпоинт требует действующий токен: все операции с сотрудниками защищены зависимостью `get_current_user`.
+
+4. Перезагрузите страницу интерфейса — добавленная запись появится в таблице. Для проверки через API можно выполнить:
+
+   ```bash
+   curl -X GET "http://localhost:8000/employees" \
+     -H "Authorization: Bearer ${TOKEN}"
+   ```
+
+   Запрос вернёт список сотрудников, текущую стоимость обеда и суммарные расчёты.
+
+5. Если хотите наполнять данные без авторизации, используйте webhook с секретом `obed-webhook-secret` — он не требует JWT, но проверяет поле `secret` в теле запроса.
+
 ### Добавление сотрудника по API
 
 ```bash
