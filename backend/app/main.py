@@ -87,7 +87,11 @@ def list_employees(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
-    employees, lunch_price = crud.list_employees(db, start_date, end_date)
+    employee_records, lunch_price = crud.list_employees(db, start_date, end_date)
+    employees = [
+        schemas.Employee.model_validate(emp, from_attributes=True)
+        for emp in employee_records
+    ]
     participants = len([emp for emp in employees if emp.status])
     total_cost = participants * lunch_price
     return schemas.EmployeeListResponse(
@@ -104,7 +108,8 @@ def add_employee(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
-    return crud.create_employee(db, payload)
+    created = crud.create_employee(db, payload)
+    return schemas.Employee.model_validate(created, from_attributes=True)
 
 
 @app.put("/employees/{employee_id}", response_model=schemas.Employee)
@@ -115,9 +120,10 @@ def edit_employee(
     db: Session = Depends(get_db),
 ):
     try:
-        return crud.update_employee(db, employee_id, payload)
+        updated = crud.update_employee(db, employee_id, payload)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return schemas.Employee.model_validate(updated, from_attributes=True)
 
 
 @app.delete("/employees/{employee_id}")
