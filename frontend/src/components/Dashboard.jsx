@@ -58,8 +58,8 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
   const [price, setPrice] = useState(150);
   const [editedPrice, setEditedPrice] = useState('150');
   const [totals, setTotals] = useState({ total_participants: 0, total_cost: 0 });
-  const [startDate, setStartDate] = useState(dayjs().startOf('month'));
-  const [endDate, setEndDate] = useState(dayjs().endOf('month'));
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newEmployee, setNewEmployee] = useState(createDefaultEmployee());
   const [importing, setImporting] = useState(false);
@@ -67,12 +67,14 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
   const [logsOpen, setLogsOpen] = useState(false);
 
   const fetchEmployees = useCallback(
-    async (rangeStart = startDate, rangeEnd = endDate) => {
+    async (rangeStart, rangeEnd) => {
+      const effectiveStart = rangeStart === undefined ? startDate : rangeStart;
+      const effectiveEnd = rangeEnd === undefined ? endDate : rangeEnd;
       setLoading(true);
       try {
         const params = {};
-        if (rangeStart) params.start_date = rangeStart.format('YYYY-MM-DD');
-        if (rangeEnd) params.end_date = rangeEnd.format('YYYY-MM-DD');
+        if (effectiveStart) params.start_date = effectiveStart.format('YYYY-MM-DD');
+        if (effectiveEnd) params.end_date = effectiveEnd.format('YYYY-MM-DD');
         const { data } = await api.get('/employees', { params });
         setEmployees(
           data.employees.map((item) => ({
@@ -94,8 +96,8 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
   );
 
   useEffect(() => {
-    fetchEmployees();
-  }, [fetchEmployees]);
+    fetchEmployees(startDate, endDate);
+  }, [startDate, endDate, fetchEmployees]);
 
   const handleAddEmployee = async () => {
     try {
@@ -108,7 +110,7 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
       await api.post('/employees', payload);
       setAddDialogOpen(false);
       setNewEmployee(createDefaultEmployee());
-      fetchEmployees();
+      fetchEmployees(startDate, endDate);
     } catch (error) {
       console.error('Не удалось добавить сотрудника', error);
     }
@@ -129,7 +131,7 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
     if (newRow.note !== oldRow.note) payload.note = newRow.note;
     if (Object.keys(payload).length) {
       await api.put(`/employees/${newRow.id}`, payload);
-      await fetchEmployees();
+      await fetchEmployees(startDate, endDate);
     }
     return newRow;
   };
@@ -142,7 +144,7 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
     if (!window.confirm('Удалить запись?')) return;
     try {
       await api.delete(`/employees/${id}`);
-      fetchEmployees();
+      fetchEmployees(startDate, endDate);
     } catch (error) {
       console.error('Не удалось удалить', error);
     }
@@ -158,7 +160,7 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
       await api.post('/employees/import', form, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      fetchEmployees();
+      fetchEmployees(startDate, endDate);
     } catch (error) {
       console.error('Ошибка импорта', error);
     } finally {
@@ -187,12 +189,12 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
   };
 
   const handleExport = (type, withPrice) => {
-    const params = {
-      start_date: startDate?.format('YYYY-MM-DD'),
-      end_date: endDate?.format('YYYY-MM-DD'),
-      include_price: withPrice
-    };
-    const filename = `employees_${params.start_date}_${params.end_date}.${type}`;
+    const params = { include_price: withPrice };
+    const startLabel = startDate ? startDate.format('YYYY-MM-DD') : 'all';
+    const endLabel = endDate ? endDate.format('YYYY-MM-DD') : 'all';
+    if (startDate) params.start_date = startDate.format('YYYY-MM-DD');
+    if (endDate) params.end_date = endDate.format('YYYY-MM-DD');
+    const filename = `employees_${startLabel}_${endLabel}.${type}`;
     downloadFile(`/employees/export/${type}`, params, filename);
   };
 
