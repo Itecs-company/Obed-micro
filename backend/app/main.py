@@ -1,9 +1,9 @@
 import os
-from datetime import date
-from typing import Optional
+from datetime import date, datetime
+from typing import Dict, Optional
 
 import pandas as pd
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -13,6 +13,9 @@ from .database import Base, SessionLocal, engine, get_db
 from .logs import log_manager
 
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "obed-webhook-secret")
+
+TRUE_VALUES = {"true", "1", "участвует", "yes", "да", "on"}
+FALSE_VALUES = {"false", "0", "не участвует", "no", "нет", "off"}
 
 app = FastAPI(title="Обеды сотрудников", version="1.0.0")
 
@@ -235,6 +238,93 @@ def webhook_employee(payload: schemas.WebhookPayload, db: Session = Depends(get_
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return {"status": "deleted", "id": payload.employee_id}
+    raise HTTPException(status_code=400, detail="Неизвестное действие")
+
+
+def _parse_status(status: Optional[str]) -> Optional[bool]:
+    if status is None:
+        return None
+    normalized = status.strip().lower()
+    if normalized in TRUE_VALUES:
+        return True
+    if normalized in FALSE_VALUES:
+        return False
+    raise HTTPException(status_code=400, detail="Некорректное значение статуса")
+
+
+def _parse_date(value: Optional[str]) -> Optional[date]:
+    if value is None or value == "":
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:  # pragma: no cover - defensive branch
+        raise HTTPException(status_code=400, detail="Дата должна быть в формате YYYY-MM-DD") from exc
+
+
+def _validate_query_secret(key: str) -> None:
+    if key != WEBHOOK_SECRET:
+        raise HTTPException(status_code=403, detail="Неверный секретный ключ")
+
+
+@app.get("/webhook/employee")
+def webhook_employee_query(
+    key: str = Query(..., description="Секретный ключ"),
+    action: str = Query(..., description="add/update/delete"),
+    employee_id: Optional[int] = Query(None, description="ID сотрудника для update/delete"),
+    full_name: Optional[str] = Query(None, description="Ф.И.О. сотрудника"),
+    employee: Optional[str] = Query(None, description="Альтернативное поле для Ф.И.О."),
+    status: Optional[str] = Query(None, description="Статус: true/false или участвует/не участвует"),
+    date_param: Optional[str] = Query(None, alias="date", description="Дата в формате YYYY-MM-DD"),
+    note: Optional[str] = Query(None, description="Примечание"),
+    db: Session = Depends(get_db),
+):
+    _validate_query_secret(key)
+    normalized_action = action.lower()
+
+    if normalized_action == "add":
+        name = (full_name or employee or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Не указано Ф.И.О. сотрудника")
+        parsed_status = _parse_status(status)
+        employee_payload = schemas.EmployeeCreate(
+            full_name=name,
+            status=True if parsed_status is None else parsed_status,
+            date=_parse_date(date_param) or datetime.utcnow().date(),
+            note=note,
+        )
+        created = crud.create_employee(db, employee_payload)
+        return {"status": "added", "id": created.id}
+
+    if normalized_action == "update":
+        if not employee_id:
+            raise HTTPException(status_code=400, detail="Не указан employee_id для обновления")
+        update_fields: Dict[str, Optional[object]] = {}
+        if full_name or employee:
+            update_fields["full_name"] = (full_name or employee or "").strip() or None
+        if status is not None:
+            update_fields["status"] = _parse_status(status)
+        parsed_date = _parse_date(date_param)
+        if parsed_date is not None:
+            update_fields["date"] = parsed_date
+        if note is not None:
+            update_fields["note"] = note
+        if not any(value is not None for value in update_fields.values()):
+            raise HTTPException(status_code=400, detail="Нет данных для обновления")
+        try:
+            crud.update_employee(db, employee_id, schemas.EmployeeUpdate(**update_fields))
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {"status": "updated", "id": employee_id}
+
+    if normalized_action == "delete":
+        if not employee_id:
+            raise HTTPException(status_code=400, detail="Не указан employee_id для удаления")
+        try:
+            crud.delete_employee(db, employee_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return {"status": "deleted", "id": employee_id}
+
     raise HTTPException(status_code=400, detail="Неизвестное действие")
 
 

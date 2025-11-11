@@ -121,19 +121,31 @@ curl -X POST http://localhost:8000/employees \
 
 ### Webhook
 
-```bash
-curl -X POST http://localhost:8000/webhook/employee \
-  -H "Content-Type: application/json" \
-  -d '{
-        "secret":"obed-webhook-secret",
-        "action":"add",
-        "employee":{
-          "full_name":"Иванов Иван",
-          "status":true,
-          "date":"2024-04-01"
-        }
-      }'
-```
+Webhook поддерживает два формата:
+
+1. **POST с JSON** (подходит для большинства интеграций):
+
+   ```bash
+   curl -X POST http://localhost:8000/webhook/employee \
+     -H "Content-Type: application/json" \
+     -d '{
+           "secret":"obed-webhook-secret",
+           "action":"add",
+           "employee":{
+             "full_name":"Иванов Иван",
+             "status":true,
+             "date":"2024-04-01"
+           }
+         }'
+   ```
+
+2. **GET c query‑параметрами** (например, для простых вебхуков вроде Bitrix24 без JSON):
+
+   ```bash
+   curl "http://localhost:8000/webhook/employee?key=obed-webhook-secret&action=add&full_name=%D0%95%D0%B2%D0%B3%D0%B5%D0%BD%D0%B8%D1%8F%20%D0%95%D0%B2%D0%B3%D0%B5%D0%BD%D0%B8%D1%8F&status=true&date=2024-04-01"
+   ```
+
+   Доступные параметры: `key` (секрет), `action` (`add`, `update`, `delete`), `full_name`/`employee`, `status`, `date`, `note`, а также `employee_id` для обновления или удаления.
 
 ### Интеграция с Bitrix24
 
