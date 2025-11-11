@@ -135,6 +135,10 @@ curl -X POST http://localhost:8000/webhook/employee \
       }'
 ```
 
+### Интеграция с Bitrix24
+
+Если вы хотите, чтобы сотрудники создавались автоматически из Bitrix24 (например, из робота или бизнес-процесса), воспользуйтесь исходящим вебхуком Bitrix24 и направьте его на эндпоинт `POST /webhook/employee`. Пошаговая инструкция и готовый JSON находятся в файле [`docs/bitrix24_webhook.md`](docs/bitrix24_webhook.md).
+
 ### Готовый набор запросов
 
 Для быстрой проверки можно воспользоваться файлом [`docs/sample_requests.http`](docs/sample_requests.http). Он содержит три
