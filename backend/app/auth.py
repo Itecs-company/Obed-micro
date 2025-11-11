@@ -31,6 +31,15 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
+def is_password_hash_usable(hashed_password: str | None) -> bool:
+    if not hashed_password:
+        return False
+    try:
+        return pwd_context.identify(hashed_password) is not None
+    except ValueError:
+        return False
+
+
 def authenticate_user(db: Session, username: str, password: str) -> models.User | None:
     user = db.query(models.User).filter(models.User.username == username).first()
     if not user:
