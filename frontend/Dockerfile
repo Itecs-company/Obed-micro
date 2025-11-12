@@ -14,6 +14,7 @@ RUN apk add --no-cache openssl \
         -subj "/CN=localhost"
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY app.conf /etc/nginx/conf.d/app.conf
+RUN mkdir -p /etc/nginx/snippets
+COPY app.conf /etc/nginx/snippets/app-common.conf
 EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]
