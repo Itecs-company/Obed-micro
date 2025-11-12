@@ -99,6 +99,25 @@ const Dashboard = ({ onLogout, themeMode, onToggleTheme }) => {
     fetchEmployees(startDate, endDate);
   }, [startDate, endDate, fetchEmployees]);
 
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        fetchEmployees();
+      }
+    };
+    const handleFocus = () => fetchEmployees();
+    const interval = window.setInterval(() => fetchEmployees(), 5000);
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchEmployees]);
+
   const handleAddEmployee = async () => {
     try {
       const payload = {
