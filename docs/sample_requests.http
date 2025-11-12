@@ -1,0 +1,25 @@
+### Получение JWT токена администратора
+POST http://localhost:8000/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin"
+}
+
+### Добавление сотрудника с использованием полученного токена
+# Замените <ACCESS_TOKEN> на значение access_token из предыдущего ответа.
+POST http://localhost:8000/employees
+Content-Type: application/json
+Authorization: Bearer <ACCESS_TOKEN>
+
+{
+  "full_name": "Иванов Иван Иванович",
+  "status": true,
+  "date": "2024-04-01",
+  "note": "Заметка из примера"
+}
+
+### Получение списка сотрудников для проверки
+GET http://localhost:8000/employees
+Authorization: Bearer <ACCESS_TOKEN>
