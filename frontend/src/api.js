@@ -4,7 +4,17 @@ const resolveDefaultBaseURL = () => {
   if (typeof window === 'undefined') {
     return 'http://localhost:8000';
   }
-  const { protocol, hostname } = window.location;
+
+  const { protocol, hostname, port } = window.location;
+
+  if (port === '5173') {
+    return 'http://localhost:8000';
+  }
+
+  if (!port || protocol === 'https:' || ['3080', '443', '80'].includes(port)) {
+    return '/api';
+  }
+
   return `${protocol}//${hostname}:8000`;
 };
 
